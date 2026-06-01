@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>地月 · 四级时空冒险</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Fira+Code:wght@400;700&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+<script src="data.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:#0a0a0f;font-family:'Noto Serif SC',serif;color:#e0dcd0;overflow-x:hidden}
+:root{--bg:#0a0a0f;--surface:#14141e;--surface2:#1c1c2a;--text:#e0dcd0;--text2:#908a78;--accent:#bb86fc}
+#load{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:24px;transition:opacity .6s}
+#load.hide{opacity:0;pointer-events:none}
+.load-ring{width:48px;height:48px;border:3px solid #2a2a3e;border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Title screen */
+#title{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center;position:relative}
+#title h1{font-size:clamp(2rem,6vw,4rem);font-family:'Cinzel',serif;margin-bottom:16px;letter-spacing:4px}
+#title .sub{font-size:clamp(.9rem,2vw,1.1rem);color:var(--text2);margin-bottom:40px;line-height:1.6}
+#title .start-btn{background:var(--surface2);border:2px solid var(--accent);border-radius:16px;padding:16px 48px;font-size:1.2rem;color:var(--text);cursor:pointer;font-family:'Cinzel',serif;transition:all .4s;letter-spacing:3px}
+#title .start-btn:hover{background:rgba(187,134,252,.15);box-shadow:0 0 30px rgba(187,134,252,.2);transform:translateY(-3px)}
+#title .version{position:absolute;bottom:24px;font-size:.7rem;color:var(--text2);opacity:.3}
+
+/* Chapter select */
+#chapter-select{display:none;min-height:100vh;padding:40px 20px}
+#chapter-select.active{display:block}
+.chapter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;max-width:960px;margin:40px auto 0}
+.chapter-card{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:24px;cursor:pointer;transition:all .4s;position:relative;overflow:hidden}
+.chapter-card:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.15)}
+.chapter-card.locked{opacity:.35;cursor:not-allowed;filter:grayscale(.6)}
+.chapter-card.locked:hover{transform:none}
+.chapter-card .day-tag{font-size:.7rem;font-family:'Fira Code',monospace;color:var(--text2);margin-bottom:6px}
+.chapter-card .ch-icon{font-size:1.8rem;margin-bottom:8px}
+.chapter-card h3{font-size:1rem;margin-bottom:4px}
+.chapter-card p{font-size:.8rem;color:var(--text2);line-height:1.4}
+.chapter-card .status-badge{position:absolute;top:12px;right:12px;font-size:.7rem;padding:2px 10px;border-radius:10px}
+.chapter-card .status-badge.done{background:rgba(0,255,65,.15);color:#7affa0}
+.chapter-card .status-badge.lock{background:rgba(255,255,255,.05);color:var(--text2)}
+.section-title{text-align:center;font-size:1.4rem;margin-top:20px}
+.section-title small{display:block;font-size:.8rem;color:var(--text2);font-weight:400;margin-top:6px}
+
+/* Game screen */
+#game{display:none;min-height:100vh;padding:0}
+#game.active{display:block}
+
+/* Day header */
+.day-header{background:var(--surface);border-bottom:1px solid rgba(255,255,255,.06);padding:16px 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+.day-header .back{background:none;border:none;color:var(--text2);font-size:1.1rem;cursor:pointer;padding:4px 8px;font-family:inherit}
+.day-header .back:hover{color:var(--text)}
+.day-header .d-title{flex:1;font-size:.95rem}
+.day-header .d-title small{display:block;font-size:.7rem;color:var(--text2);font-weight:400}
+.day-header .d-hp{font-size:.8rem;font-family:'Fira Code',monospace;color:#7affa0;display:flex;align-items:center;gap:6px}
+.day-header .d-hp.danger{color:#ff6666}
+.day-header .d-stars{color:var(--accent);font-size:.85rem;font-family:'Fira Code',monospace}
+
+/* Story area */
+.story-area{max-width:720px;margin:0 auto;padding:32px 20px 100px}
+.story-passage{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:32px;margin-bottom:24px;line-height:2}
+.story-passage .passage-title{font-size:1.2rem;font-weight:700;margin-bottom:16px}
+.story-passage .passage-text{font-size:.92rem;color:var(--text);line-height:2.2}
+.story-passage .passage-text em{color:var(--accent);font-style:normal;border-bottom:2px solid var(--accent);padding:0 2px;cursor:help;position:relative}
+.story-passage .passage-text em:hover::after{content:attr(data-def);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 12px;font-size:.75rem;white-space:nowrap;color:var(--text);z-index:5}
+.vocab-highlight{color:var(--accent);border-bottom:2px solid var(--accent);cursor:help;position:relative}
+.vocab-highlight:hover::after{content:attr(data-def);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 12px;font-size:.75rem;white-space:nowrap;color:var(--text);z-index:5}
+
+/* Narrative choice */
+.choice-box{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:24px;margin-bottom:24px}
+.choice-box .q{font-size:.95rem;margin-bottom:16px;line-height:1.6}
+.choice-btn{display:block;width:100%;background:var(--surface2);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 18px;margin-bottom:8px;color:var(--text);cursor:pointer;font-family:inherit;font-size:.85rem;text-align:left;transition:all .3s}
+.choice-btn:hover{background:var(--bg);border-color:var(--accent);transform:translateX(4px)}
+.choice-btn.selected{background:rgba(187,134,252,.12);border-color:var(--accent)}
+.choice-btn.good{background:rgba(0,255,65,.1);border-color:#7affa0}
+.choice-btn.bad{background:rgba(255,107,107,.1);border-color:#ff6666}
+
+/* Vocab challenge */
+.challenge-box{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:32px;margin-bottom:24px;text-align:center}
+.challenge-box .cw{font-size:2rem;font-weight:700;margin-bottom:4px;letter-spacing:2px}
+.challenge-box .cp{font-size:.75rem;color:var(--text2);margin-bottom:20px;font-family:'Fira Code',monospace}
+.challenge-box .ch-desc{font-size:.85rem;color:var(--text2);margin-bottom:20px;line-height:1.5}
+.challenge-opt{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:500px;margin:0 auto}
+.challenge-opt button{background:var(--surface2);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 12px;color:var(--text);cursor:pointer;font-family:inherit;font-size:.82rem;transition:all .3s;text-align:center;line-height:1.4;min-height:60px}
+.challenge-opt button:hover{border-color:rgba(255,255,255,.2);transform:translateY(-2px)}
+.challenge-opt button.correct{background:rgba(0,255,65,.12);border-color:#7affa0}
+.challenge-opt button.wrong{background:rgba(255,107,107,.1);border-color:#ff6666}
+.challenge-feedback{margin-top:16px;font-size:.9rem;min-height:2em}
+.challenge-next{margin-top:16px;display:none;background:var(--surface2);border:1px solid var(--accent);border-radius:10px;padding:10px 28px;color:var(--text);cursor:pointer;font-family:inherit;font-size:.85rem;transition:all .3s}
+.challenge-next:hover{background:rgba(187,134,252,.12)}
+.challenge-progress{font-size:.7rem;color:var(--text2);margin-bottom:12px;font-family:'Fira Code',monospace}
+
+/* Boss battle */
+.boss-area{max-width:720px;margin:0 auto;padding:32px 20px 100px;text-align:center}
+.boss-sprite{font-size:5rem;margin-bottom:12px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.boss-name{font-size:1.3rem;font-weight:700;margin-bottom:4px}
+.boss-sub{font-size:.8rem;color:var(--text2);margin-bottom:16px}
+.boss-hp-bar{max-width:400px;margin:0 auto 8px;height:8px;background:rgba(255,0,0,.15);border-radius:4px;overflow:hidden}
+.boss-hp-bar .fill{height:100%;background:linear-gradient(90deg,#c62828,#ff4444);border-radius:4px;transition:width .5s}
+.boss-hp-text{font-size:.75rem;color:var(--text2);font-family:'Fira Code',monospace;margin-bottom:24px}
+.player-hp-bar{max-width:400px;margin:16px auto 8px;height:6px;background:rgba(0,255,65,.1);border-radius:3px;overflow:hidden}
+.player-hp-bar .fill{height:100%;background:linear-gradient(90deg,#4caf50,#7affa0);border-radius:3px;transition:width .4s}
+.player-hp-text{font-size:.7rem;color:var(--text2);font-family:'Fira Code',monospace;margin-bottom:20px}
+.boss-log{font-size:.85rem;color:var(--text2);margin-bottom:20px;min-height:2em;line-height:1.6}
+.boss-attack{font-size:1.1rem;margin-bottom:16px;min-height:1.5em}
+.boss-attack .ba-word{font-size:1.6rem;font-weight:700;display:block;margin-bottom:4px}
+.boss-attack .ba-ctx{font-size:.82rem;color:var(--text2);line-height:1.5;max-width:500px;margin:0 auto}
+.boss-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:500px;margin:0 auto}
+.boss-options button{background:var(--surface2);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 12px;color:var(--text);cursor:pointer;font-family:inherit;font-size:.82rem;transition:all .3s;min-height:60px;text-align:center;line-height:1.4}
+.boss-options button:hover{border-color:var(--accent);transform:translateY(-2px)}
+.boss-options button.correct{background:rgba(0,255,65,.12);border-color:#7affa0}
+.boss-options button.wrong{background:rgba(255,107,107,.1);border-color:#ff6666}
+.boss-victory{font-size:1.5rem;padding:40px 20px;line-height:2}
+.boss-victory .big{font-size:2.5rem;display:block;margin-bottom:12px}
+
+/* Day complete */
+.day-complete{text-align:center;padding:60px 20px}
+.day-complete .big-icon{font-size:4rem;margin-bottom:16px}
+.day-complete h2{font-size:1.5rem;margin-bottom:8px}
+.day-complete p{color:var(--text2);margin-bottom:24px;line-height:1.6}
+.day-complete .stats{display:flex;gap:24px;justify-content:center;margin-bottom:24px;flex-wrap:wrap}
+.day-complete .stats span{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:12px 20px;font-size:.85rem}
+.day-complete .next-btn{background:var(--surface2);border:2px solid var(--accent);border-radius:12px;padding:12px 36px;font-size:1rem;color:var(--text);cursor:pointer;font-family:inherit;transition:all .4s}
+.day-complete .next-btn:hover{background:rgba(187,134,252,.12);box-shadow:0 0 20px rgba(187,134,252,.15)}
+
+/* Inventory / Loot after boss */
+.loot-box{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:24px}
+.loot-item{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:16px;text-align:center;min-width:100px}
+.loot-item .li-icon{font-size:1.8rem;margin-bottom:4px}
+.loot-item .li-name{font-size:.7rem;color:var(--text2)}
+
+/* Epilogue (Day 8) special */
+.epilogue{max-width:680px;margin:0 auto;padding:40px 20px;text-align:center}
+.epilogue .epi-icon{font-size:3rem;margin-bottom:16px}
+.epilogue .epi-title{font-size:1.5rem;margin-bottom:24px}
+.epilogue .epi-text{font-size:.92rem;line-height:2.2;color:var(--text);text-align:left;margin-bottom:24px}
+
+@media(max-width:600px){
+  .chapter-grid{grid-template-columns:1fr}
+  .challenge-opt,.boss-options{grid-template-columns:1fr}
+  .story-passage{padding:20px}
+  .day-header{padding:12px 16px}
+}
+</style>
+</head>
+<body>
+
+<div id="load"><div class="load-ring"></div><div style="font-size:.8rem;color:var(--text2);letter-spacing:2px;">加载冒险...</div></div>
+
+<!-- Title -->
+<section id="title">
+  <h1>🌌 时空迷途</h1>
+  <div class="sub">
+    一段跨越六个世界的四级词汇冒险<br>
+    八天 · 八章 · 命运由你的选择书写
+  </div>
+  <button class="start-btn" onclick="startGame()">✦ 开始冒险 ✦</button>
+  <div class="version">v1.0 · 地月专属</div>
+</section>
+
+<!-- Chapter select -->
+<section id="chapter-select">
+  <div class="section-title">🗺️ 时空地图 <small>选择章节开始冒险</small></div>
+  <div class="chapter-grid" id="chapterGrid"></div>
+</section>
+
+<!-- Game -->
+<section id="game">
+  <div class="day-header" id="dayHeader">
+    <button class="back" onclick="exitGame()">←</button>
+    <div class="d-title" id="dayTitle">第 X 章 <small id="daySubtitle">章节名</small></div>
+    <div class="d-hp" id="playerHP">❤️ 100</div>
+    <div class="d-stars" id="dStars">⭐ 0</div>
+  </div>
+  <div id="gameContent"></div>
+</section>
+
+<script>
+/* ─── SAVE ─── */
+const SK = 'cet4_rpg_save';
+function loadSave(){
+  try{return JSON.parse(localStorage.getItem(SK))||{day:1,hp:100,stars:0,completed:[],bossesDefeated:[]}}catch(e){return {day:1,hp:100,stars:0,completed:[],bossesDefeated:[]}}
+}
+function saveSave(s){localStorage.setItem(SK,JSON.stringify(s))}
+
+/* ─── CHAPTER DATA ─── */
+const CHAPTERS = [
+  {id:'df',day:1,icon:'🗡️',title:'暗影森林の献祭',domain:'darkfantasy',desc:'血月之下，古老的诅咒正在苏醒。你必须穿越被黑暗笼罩的森林，找到祭坛，打破轮回。',themeColor:'#c62828'},
+  {id:'fgo',day:2,icon:'⚔️',title:'迦勒底の召唤',domain:'fgo',desc:'人理烧却的危机中，你被选为临时御主。召唤从者，穿越特异点，守护人类的历史。',themeColor:'#d4a017'},
+  {id:'dev',day:3,icon:'🖥️',title:'数字迷宫の守护进程',domain:'devops',desc:'一个由代码构成的数字世界正在崩溃。修复网络，杀死守护进程，找到系统的出口。',themeColor:'#00ff41'},
+  {id:'mys',day:4,icon:'🔮',title:'星辰塔罗の预言',domain:'mystic',desc:'古老的占星塔中，塔罗牌揭示了你此行的真正目的。星辰的轨迹，由你亲手续写。',themeColor:'#bb86fc'},
+  {id:'gl',day:5,icon:'💕',title:'樱花树下の告白',domain:'galgame',desc:'春日的校园，樱花飞舞。一封没有署名的信，一段埋藏多年的心事。风中有秘密在低语。',themeColor:'#ff6b9d'},
+  {id:'bio',day:6,icon:'🧬',title:'基因实验室の危机',domain:'biolab',desc:'废弃的实验室中，试管里的细胞正在异常分裂。找到变异源头，阻止一场生物灾难。',themeColor:'#4caf50'},
+  {id:'final',day:7,icon:'🌑',title:'混沌之核',domain:'all',desc:'碎片聚合，时空之门打开。六界的黑暗融合为混沌之主——这是最后的战斗。',themeColor:'#ff4444'},
+  {id:'end',day:8,icon:'🌅',title:'归途',domain:'none',desc:'旅程的终点。晨光中，你回头望向走过的路——所有的词汇，都成了你故事的一部分。',themeColor:'#ffd54f'}
+];
+
+/* ─── STORY CONTENT ─── */
+const STORIES = {};
+
+// Day 1: Dark Fantasy
+STORIES.df = {
+  icon:'🗡️', bg:'Dark Fantasy',
+  intro: {
+    text:'你睁开眼睛。头顶是一轮暗红色的月亮，月光穿过层层叠叠的枝叶，在你身上投下斑驳的暗影。空气中弥漫着潮湿的泥土味和一股若有若无的铁锈味。你撑着地面坐起来，手指触到了什么黏稠的东西——\n\n是血。',
+    choices: [
+      {text:'检查血迹的来源',result:'你沿着血迹的轨迹看去——一具尸体靠在不远处的树干上，胸前有一道深深的伤口。你的手指不自觉地摸向腰间，那里挂着一把匕首。'},
+      {text:'大声呼救',result:'你的声音在森林中回荡，然后被寂静吞噬。远处传来一阵低沉的嚎叫——你决定保持安静，开始探索周围的环境。'}
+    ]
+  },
+  reading: {
+    title:'第一章 · 血月森林',
+    text:'古老的森林笼罩在永夜的诅咒之中。每一棵树的树干上都刻着古老的${ritual}符文，微弱的红光在刻痕中流动。你知道，唯有在血月到达天顶之前完成祭坛的${sacrifice}，这片土地的${decay}才会停止。但有什么东西在暗处潜伏——你感到一阵深入骨髓的${dread}，仿佛被某种不可名状的存在注视着。你握紧了手中的${blade}，刃面映出一张苍白而坚定的脸。'
+  },
+  vocab: [
+    {w:'ritual',p:'n.',d:'献祭仪式',e:'The cult performed a blood ritual beneath the crimson moon.'},
+    {w:'sacrifice',p:'n./v.',d:'活祭；献祭',e:'The priest demanded a sacrifice to awaken the ancient demon.'},
+    {w:'decay',p:'n./v.',d:'腐朽；衰败',e:'The castle smelled of decay—wet stone, rotting wood.'},
+    {w:'dread',p:'n./v.',d:'恐惧；畏惧',e:'A cold dread settled in his chest, heavier than any blade.'},
+    {w:'blade',p:'n.',d:'利刃',e:'A cursed blade leaves wounds that never heal.'}
+  ],
+  challenges:[
+    {q:'前方出现一个暗影生物，它问你："你脚下的符文意味着什么？"',word:'ritual',answers:['献祭仪式','腐朽','恐惧','利刃'],correct:0,explain:'Ritual是"献祭仪式"——你脚下的符文正是仪式的一部分。'},
+    {q:'受伤的旅人抓住你的手腕，低语道："把这场——结束掉。"',word:'decay',answers:['终结','腐朽','诅咒','暗影'],correct:1,explain:'Decay是"腐朽"——大地在诅咒中腐烂，你需要终结这一切。'},
+    {q:'向祭坛献上祭品，你需要一个词来表达这个动作：',word:'sacrifice',answers:['祭祀','战利品','礼物','祈求'],correct:0,explain:'Sacrifice正是"献祭/祭祀"的意思。祭坛需要你付出代价。'}
+  ],
+  boss:{
+    name:'暗影守卫 · Shade Warden',
+    icon:'👹', hp:50,
+    attacks:[
+      {word:'shadow',ctx:'暗影守卫低吼："你驱散不了我的——我是这片森林的化身。"',options:['光','暗影','恐惧','符文'],answer:1},
+      {word:'curse',ctx:'它的声音变成了千万人的低语："血月之——从未解除。"',options:['诅咒','祝福','献祭','契约'],answer:0},
+      {word:'hollow',ctx:'它的胸口裂开，里面空无一物："看看你的内心——难道不是一样的——？"',options:['黑暗','寒冷','空洞','孤独'],answer:2}
+    ]
+  },
+  outro:'祭坛的光芒吞噬了暗影守卫。血月终于落下，第一缕苍白的晨光穿过树梢。你低头看着自己的手掌——那里有一个发光的符文，像是一把钥匙的印记。\n\n第一个世界的大门关闭了，但你知道，这只是开始。'
+};
+
+// Day 2: FGO
+STORIES.fgo = {
+  icon:'⚔️', bg:'Fate/Grand Order',
+  intro: {
+    text:'光芒吞没你的瞬间，耳边响起了警报声。\n\n"灵子转移成功！Master，你还好吗？"——一个女性的声音从通讯器中传来，焦急而清晰。你低头看向自己的手背，那里有三道发光的刻印。\n\n你被召唤了。这里是迦勒底，而你，是最后的Master。',
+    choices: [
+      {text:'确认现状——询问当前特异点信息',result:'"这里是第七特异点——巴比伦尼亚。人理烧却的危机已经蔓延到这里。"通讯器的另一端顿了顿，"你需要找到并修复这个时代的圣杯。我们会全程支援你。"'},
+      {text:'尝试使用令咒——测试力量',result:'手背上的令咒微微发热。你感觉到一股力量沿着手臂流淌——这是你与从者之间的契约之证。通讯器中传来赞许的声音："明智的选择。从现在开始，你的判断就是我们的判断。"'}
+    ]
+  },
+  reading: {
+    title:'第二章 · 巴比伦尼亚之门',
+    text:'你站在古老神殿的废墟中，手中握着一枚发光的${crystal}。这是灵子转移的关键——圣晶石。前方的空气中浮现出一个巨大的召唤阵。你举起手背上的${command}刻印，低声念诵了${summon}咒文。光芒中，一个身影缓缓浮现——那是你的从者。她说出了自己的职阶和真名，然后单膝跪地。\n\n"从今天起，我的${sword}为您而挥，我的${legend}为您而续。"'
+  },
+  vocab: [
+    {w:'crystal',p:'n.',d:'水晶；圣晶石',e:'Saint Quartz: the currency of hope and despair.'},
+    {w:'command',p:'n./v.',d:'指令；令咒',e:'Command seal expended. One stroke left between you and certain death.'},
+    {w:'summon',p:'v.',d:'召唤',e:'The summoning circle flared, and a new name was etched into Chaldea records.'},
+    {w:'sword',p:'n.',d:'剑；Saber职阶的武器',e:'The sword drank the light from every flame nearby.'},
+    {w:'legend',p:'n.',d:'传说；英雄的生平',e:'His legend grew with every retelling, until fiction overtook fact.'}
+  ],
+  challenges:[
+    {q:'指挥从者使用宝具。你高喊：释放——Phantasm！',word:'noble',answers:['Shadow','Sacred','Noble','Crystal'],correct:2,explain:'Noble Phantasm——宝具，从者最强的武装。正确发音：Noble！'},
+    {q:'面对魔神柱时，你需要使用什么来强化从者？',word:'command',answers:['圣杯','令咒','宝具','羁绊'],correct:1,explain:'Command Seal（令咒）可以在关键时刻强化从者或强制其行动。'},
+    {q:'战斗结束后，从者说："我们的——又加深了一层。"',word:'bond',answers:['羁绊','契约','誓言','牵绊'],correct:0,explain:'Bond正是"羁绊"——与从者之间的情感连结。'}
+  ],
+  boss:{
+    name:'魔神柱 · Flauros',
+    icon:'🔥', hp:55,
+    attacks:[
+      {word:'flame',ctx:'魔神柱周身燃起——，热气扭曲了空气。',options:['火焰','烟雾','毒气','岩浆'],answer:0},
+      {word:'defeat',ctx:'它咆哮着："你无法——我。我是人理的敌人！"',options:['理解','面对','击破','逃避'],answer:2},
+      {word:'fortune',ctx:'"你的——到此为止了，Master！"无数光柱向你射来。',options:['命运','运气','力量','旅程'],answer:0}
+    ]
+  },
+  outro:'魔神柱轰然倒塌。特异点的核心开始修复，天空中的裂痕缓缓合拢。你的从者站在你身边，微笑着消散成金色的光点。\n\n"我们会再见面的，Master。"\n\n光芒再次将你吞没。'
+};
+
+// Day 3: DevOps
+STORIES.dev = {
+  icon:'🖥️', bg:'DevOps',
+  intro: {
+    text:'没有过渡，没有光芒——你突然出现在一个由绿色字符组成的空间里。脚下是无限延伸的二进制码，头顶是旋转的数据流。\n\n一个冰冷的机械声在你耳边响起：\n"WARNING: SYSTEM INTEGRITY COMPROMISED. ALL DAEMONS OFFLINE."\n\n你低头看——你的手不再是血肉，而是由光构成的界面。你被数字化了。这里是系统的深层核心。',
+    choices: [
+      {text:'检查系统日志——找故障根源',result:'日志文件喷涌而出。你在海量的ERROR信息中找到了关键线索：一个核心进程被恶意注入，导致了整个系统的连锁崩溃。你需要修复它。'},
+      {text:'尝试连接守护进程——建立通信',result:'你的界面发出ping信号。一个微弱的回应从系统的深处传来——还有一个守护进程在坚持，但它快要撑不住了。你需要找到它。'}
+    ]
+  },
+  reading: {
+    title:'第三章 · 核心深处',
+    text:'你沿着数据流的下游前行。系统的${route}表已被破坏，每个请求都在错误的路径上迷失。你看到一个${daemon}的残影——它在守护一个关键的${socket}端口，生命体征正在减弱。\n\n"帮帮我……"它的声音像是远距离传输的杂音。"有人在${config}文件中植入了恶意代码。找到它，${patch}它，否则整个核心将会${crash}。"'
+  },
+  vocab: [
+    {w:'route',p:'n./v.',d:'路由；转发路径',e:'The packet routes through three proxies before reaching your VPS.'},
+    {w:'daemon',p:'n.',d:'守护进程',e:'The daemon runs silently until it crashes at 3 AM.'},
+    {w:'socket',p:'n.',d:'套接字；端口',e:'WebSocket connection closed. The server went to sleep.'},
+    {w:'config',p:'n./v.',d:'配置',e:'The config file is 400 lines long. Nobody knows what half does.'},
+    {w:'patch',p:'n./v.',d:'修补；补丁',e:'Emergency patch deployed. The vulnerability window was 47 minutes.'},
+    {w:'crash',p:'v./n.',d:'崩溃',e:'The process crashed without a stack trace. Classic segfault.'}
+  ],
+  challenges:[
+    {q:'你需要找到被篡改的——文件来修复系统。',word:'config',answers:['配置','路由','日志','缓存'],correct:0,explain:'Config（配置）文件——就是存储系统设置的地方。'},
+    {q:'守护进程守护着一个关键的——端口。',word:'socket',answers:['端口','路由','节点','隧道'],correct:0,explain:'Socket（套接字/端口）是网络通信的端点。守护进程守护的就是它。'},
+    {q:'系统警告：如果不打上——，系统将在60秒内崩溃。',word:'patch',answers:['补丁','重启','更新','备份'],correct:0,explain:'Patch（补丁/修补程序）——紧急修复漏洞的唯一方法。'}
+  ],
+  boss:{
+    name:'内核恐慌 · Kernel Panic',
+    icon:'💀', hp:50,
+    attacks:[
+      {word:'error',ctx:'系统尖叫：FATAL —— at line 347. Stack trace unavailable.',options:['错误','警告','崩溃','异常'],answer:0},
+      {word:'memory',ctx:'—— leak detected: process size 8GB. OOM killer activated.',options:['内存','缓存','日志','存储'],answer:0},
+      {word:'timeout',ctx:'Connection——: the server is not coming back.',options:['超时','断开','拒绝','失败'],answer:0}
+    ]
+  },
+  outro:'随着最后一个补丁部署完毕，系统恢复了平静。数据流开始有序流动，守护进程重新上线。你的数字身体开始分解成光点——\n\n你通过了核心的试炼。但更大的挑战在等着你。'
+};
+
+// Day 4: Mystic
+STORIES.mys = {
+  icon:'🔮', bg:'Mystic',
+  intro: {
+    text:'你推开一扇沉重的木门。门后是一座巨大的圆形大厅，穹顶上绘满了星辰的运行轨迹。中央的圆桌上铺着深紫色的天鹅绒，上面散落着塔罗牌。\n\n一个裹着披风的身影背对着你，正在将蜡烛一支支点燃。她没有回头，只是轻声说：\n\n"你终于来了。我看到了你的到来——在星辰中，在水晶中，在我的梦境中。坐下吧，让牌告诉你真相。"',
+    choices: [
+      {text:'坐下——接受塔罗解读',result:'塔罗师将牌推到你面前。牌面上的图案在烛光中微微发亮——愚者、命运之轮、倒吊人。她说："你的旅程是被编排好的，但结局掌握在你手中。"'},
+      {text:'询问她的身份——打探情报',result:'她轻笑了一声。"我只是一个看牌的人。但牌从来不会撒谎——它们只会说出你内心深处已经知道的事。"她翻开了第一张牌。'}
+    ]
+  },
+  reading: {
+    title:'第四章 · 星辰之塔',
+    text:'塔罗师翻开第一张牌——${arcana}。愚者。零号牌。"你站在旅程的起点，"她说，"这张牌代表了无限的可能性。"她的手指划过牌面，${sigil}在黑暗中浮现，如磷光般闪烁。"星辰的${celestial}轨迹已经为你标好了路径——但通往真相的道路上，总有${shadow}和${light}交织。"'
+  },
+  vocab: [
+    {w:'arcana',p:'n.',d:'奥秘；塔罗大阿卡纳',e:'The Fool is card zero—not ignorance, but courage.'},
+    {w:'sigil',p:'n.',d:'印记；符文',e:'He carved the sigil into the floor—a lock, a key, a promise.'},
+    {w:'celestial',p:'adj.',d:'天体的；天上的',e:'The celestial bodies are clocks that tell you when.'},
+    {w:'shadow',p:'n.',d:'暗影；阴影',e:'The shadows moved against the torchlight.'},
+    {w:'light',p:'n.',d:'光；光明',e:'Even the smallest light can pierce the deepest dark.'}
+  ],
+  challenges:[
+    {q:'塔罗分为大——和小阿卡纳。第一张牌是愚者。',word:'arcana',answers:['奥秘','奥秘','奥秘','奥秘'],correct:0,explain:'Arcana——阿卡纳，塔罗牌的奥秘体系。'},
+    {q:'她在桌面上画了一个发光的——，像是一个封印。',word:'sigil',answers:['印记','魔法阵','符文','圆圈'],correct:0,explain:'Sigil是"印记/符文"——带有特定意图的神秘符号。'},
+    {q:'"星辰的——轨迹不会说谎。"',word:'celestial',answers:['天体的','永恒的','命运的','神秘的'],correct:0,explain:'Celestial意为"天体的"——属于天空和星辰的。'}
+  ],
+  boss:{
+    name:'命运编织者 · Fate Weaver',
+    icon:'🧙', hp:45,
+    attacks:[
+      {word:'fate',ctx:'"你的——已经注定！"她将命运之轮掷向你。',options:['命运','运气','未来','宿命'],answer:0},
+      {word:'dream',ctx:'"这一切只是一个——？你确定吗？"',options:['梦境','幻象','谎言','游戏'],answer:0},
+      {word:'time',ctx:'"—— 不等人。"她的声音穿透了星辰的低语。',options:['时间','命运','星辰','永恒'],answer:0}
+    ]
+  },
+  outro:'命运编织者的塔罗牌在你面前化为灰烬。星辰的轨迹重新绘制——这一次，你是执笔的人。\n\n你带着塔罗师最后的赠言离开了：\n"你已经在书写自己的故事了。继续前进吧。"'
+};
+
+// Day 5: Galgame
+STORIES.gl = {
+  icon:'💕', bg:'Galgame',
+  intro: {
+    text:'你站在一座古老的校门前。樱花正飘落，铺满了通往教学楼的道路。空气中有青草和花香的味道，远处传来社团活动室里的谈笑声。\n\n你低头看自己——校服。书包。一封被揉皱的信。\n\n信上只有一行字：\n"放学后，天台见。我有话必须告诉你。"\n\n落款是……你的同桌？',
+    choices: [
+      {text:'准时赴约——带着忐忑和期待',result:'你推开天台的门。夕阳的余晖中，她背对着你站着，裙摆在风中轻轻飘动。听到你的脚步声，她转过身——脸红了。'},
+      {text:'先去找朋友商量——寻求建议',result:'文化祭准备中的朋友放下手工活，意味深长地笑了："这还用想吗？去啊。但是——先把这个带着。"她塞给你一个小小的护身符。"加油。"'}
+    ]
+  },
+  reading: {
+    title:'第五章 · 樱花树下',
+    text:'操场上正在进行文化祭的准备工作。你的${classmate}在摊位之间穿梭，手里抱着手工制作的装饰品。${friend}们在社团活动室里争论着剧本的最后一幕。\n\n你想起两年前的那个春天——你第一次在这个${campus}里迷路，是她带你找到了教室。那时你心里有一种温暖的感觉，说不清，道不明。\n\n也许这就是${love}吧。一种不需要理由的引力。就像樱花知道什么时候该盛开，什么时候该飘落。',
+  },
+  vocab: [
+    {w:'classmate',p:'n.',d:'同班同学',e:'My classmate confessed her feelings during the trip.'},
+    {w:'friend',p:'n.',d:'朋友',e:'Childhood friends often drift apart after high school.'},
+    {w:'campus',p:'n.',d:'校园',e:'Spring on campus means cherry blossom season.'},
+    {w:'love',p:'n./v.',d:'恋爱；爱',e:'First love always leaves the deepest impression.'}
+  ],
+  challenges:[
+    {q:'你走进教室，——向你挥手。',word:'classmate',answers:['同班同学','前辈','朋友','后辈'],correct:0,explain:'Classmate是"同班同学"——一起上课的人。'},
+    {q:'一起筹备文化祭的——们给了你很多帮助。',word:'friend',answers:['家人','朋友','同学','前辈'],correct:1,explain:'Friend是"朋友"——陪你一起努力的人。'},
+    {q:'文化祭前夜，你帮忙装扮——，樱花灯映着你们的影子。',word:'campus',answers:['教室','校园','操场','社团'],correct:1,explain:'Campus是"校园"——青春故事发生的舞台。'}
+  ],
+  boss:{
+    name:'心之魔 · Heart's Demon',
+    icon:'💔', hp:40,
+    attacks:[
+      {word:'doubt',ctx:'"你——这份感情。" 心之魔低语着，你的犹豫在放大。',options:['怀疑','害怕','逃避','否认'],answer:0},
+      {word:'alone',ctx:'"到头来，你仍然是一个——。"',options:['孤独的','软弱的','迷茫的','平凡的'],answer:0},
+      {word:'fear',ctx:'"——会让你失去一切的。"',options:['恐惧','愤怒','悲伤','犹豫'],answer:0}
+    ]
+  },
+  outro:'心之魔在你的告白中消散了。真正的勇气不是没有恐惧，而是带着恐惧依然向前走。\n\n樱花落在你的肩上。她微笑着，眼角有泪光。\n\n"谢谢你。"她说。'
+};
+
+// Day 6: Biology
+STORIES.bio = {
+  icon:'🧬', bg:'Biology',
+  intro: {
+    text:'空气中弥漫着消毒水和福尔马林的味道。白色的灯光在金属台面上反射出冰冷的光。\n\n这是一间废弃的生物实验室。培养皿散落在实验台上，显微镜倒在地上，墙上贴着泛白的细胞结构图。在最里面的无菌柜中，一个试管发出微弱的荧光。\n\n你走近一看——标签上写着：\n"SAMPLE X-7 · HANDLE WITH EXTREME CAUTION"\n\n里面的物质正在以肉眼可见的速度增殖。',
+    choices: [
+      {text:'启动生物安全柜——先隔离样本',result:'安全柜的气流系统开始工作。你将试管放入隔离环境中，透过防弹玻璃观察——那些细胞正在疯狂分裂，形成你从未见过的结构。'},
+      {text:'寻找实验记录——了解发生了什么',result:'你在废纸堆中找到了一本实验日志。最后一条记录写着："细胞分裂速度超出控制。它不只是生长——它在学习。我们必须终止实验。"'}
+    ]
+  },
+  reading: {
+    title:'第六章 · 基因深渊',
+    text:'通过显微镜，你可以看到那些${cell}正在以惊人的速度分裂。每个${nucleus}中闪烁着异常的荧光——这表明${gene}表达已经失控。这些${organism}正在以指数级的速度进化，仿佛某种外界力量正在加速${evolution}的过程。你必须找到抑制${enzyme}，在变异传播到整个实验室之前阻止它。',
+  },
+  vocab: [
+    {w:'cell',p:'n.',d:'细胞',e:'The cell membrane regulates what enters and leaves.'},
+    {w:'nucleus',p:'n.',d:'细胞核',e:'The nucleus contains the cell genetic material.'},
+    {w:'gene',p:'n.',d:'基因',e:'The gene encodes instructions for protein synthesis.'},
+    {w:'organism',p:'n.',d:'生物体；有机体',e:'The organism adapts to its environment over generations.'},
+    {w:'evolution',p:'n.',d:'进化；演化',e:'Evolution favors those who adapt.'},
+    {w:'enzyme',p:'n.',d:'酶',e:'The enzyme catalyzes the breakdown of starch.'}
+  ],
+  challenges:[
+    {q:'显微镜下你看到——正在分裂。',word:'cell',answers:['细胞','基因','酶','病毒'],correct:0,explain:'Cell是"细胞"——生命的基本单位。'},
+    {q:'异常信号来自——内部，遗传物质正在被改写。',word:'nucleus',answers:['细胞核','细胞壁','膜','细胞质'],correct:0,explain:'Nucleus是"细胞核"——遗传物质的所在地。'},
+    {q:'你需要合成一种抑制——来阻断变异。',word:'enzyme',answers:['酶','抗体','激素','基因'],correct:0,explain:'Enzyme是"酶"——催化生物化学反应的蛋白质。'}
+  ],
+  boss:{
+    name:'变异聚合体 · The Swarm',
+    icon:'🦠', hp:50,
+    attacks:[
+      {word:'virus',ctx:'聚合体释放出——粒子，空气变得浑浊。',options:['病毒','细菌','毒素','孢子'],answer:0},
+      {word:'mutate',ctx:'"我们——。我们适应。我们永不消亡。"',options:['变异','进化','分裂','成长'],answer:0},
+      {word:'survive',ctx:'它的核心闪烁着：—— is the only law.',options:['生存','进化','竞争','适应'],answer:0}
+    ]
+  },
+  outro:'抑制酶注入核心。变异聚合体的生长停止了，荧光逐渐暗淡。\n\n实验室恢复了平静。你带走了实验数据——这份经验在未来的战斗中可能会有用。\n\n你走出实验室，迎面而来的是星光。'
+};
+
+// Day 7: Final Boss
+STORIES.final = {
+  icon:'🌑', bg:'Final',
+  intro: {
+    text:'六道光芒在你面前汇聚。暗影森林的符文、迦勒底的令咒、数字核心的代码、星辰塔罗的牌面、樱花树下的信、实验室的数据盘——六枚碎片在你手中融合成一柄钥匙。\n\n前方的空间裂开了一道巨大的缝隙。虚无的黑暗从裂缝中涌出，带着无数个声音——它们尖叫着、低语着、呼唤着你的名字。\n\n混沌之核在等待你。它由你走过的每一个世界的黑暗面凝聚而成。击败它，你就能找到回家的路。',
+    choices: [
+      {text:'握紧钥匙——踏入裂缝',result:'你一步踏入虚空。身后是六个世界的光，面前是无尽的黑。你已经准备好了。'},
+      {text:'回顾你的旅程——坚定决心',result:'你想起了每一个世界的片段：血月下的祭坛、召唤阵的光芒、守护进程的最后请求、塔罗师的微笑、樱花树下的告白、实验室的荧光。你不再犹豫。'}
+    ]
+  },
+  reading: {
+    title:'第七章 · 混沌之核',
+    text:'你站在一个由混乱构成的空间中。物理法则在这里毫无意义——上下颠倒，时间扭曲。\n\n混沌之核没有固定的形态。它时而像暗影森林的怪物，时而像魔神柱，时而像你记忆中最恐惧的画面。它的攻击中混杂着所有领域的词汇——你必须从这些混乱的语言中找出真相。\n\n你握紧钥匙。你学过这些词。你知道它们的意思。'   },
+  vocab: [],
+  challenges:[],
+  boss:{
+    name:'混沌主宰 · Chaos Lord',
+    icon:'🌑', hp:80,
+    attacks:[
+      {word:'chaos',ctx:'"我是——本身。我是你的恐惧加上你的勇气所创造出来的。"',options:['混沌','暗影','混乱','虚无'],answer:0},
+      {word:'courage',ctx:'"你的——在你踏出第一步时就诞生了。"',options:['勇气','力量','信念','决心'],answer:0},
+      {word:'journey',ctx:'"这不是一场试炼。这是一段——。而你已经走完了它。"',options:['旅程','冒险','战斗','修行'],answer:0},
+      {word:'light',ctx:'"在黑暗的尽头，总是有——。"',options:['光','希望','答案','出口'],answer:0},
+      {word:'home',ctx:'"你一直在寻找的——，其实一直都在你心里。"',options:['家','答案','终点','归途'],answer:0}
+    ]
+  },
+  outro:'混沌之核在你的最后一句回答中瓦解。六道光芒从碎片中升起，在你周围形成了一个温暖的光茧。\n\n一个声音——像所有你帮助过的人的声音叠加在一起——轻轻说：\n\n"你学会的不只是词汇。你学会了如何理解不同的世界。而这，就是四级的真正意义。"\n\n裂缝开始闭合。你知道，是时候回家了。'
+};
+
+// Day 8: Epilogue
+STORIES.end = {
+  icon:'🌅', bg:'Epilogue',
+  intro: null,
+  reading: null,
+  vocab:[],
+  challenges:[],
+  boss:null,
+  epilogue:true,
+  text:'你从床上醒来。\n\n晨光透过窗帘的缝隙洒进来，落在你的枕边。手机屏幕亮着，上面是四级考试的倒计时——还有最后一天。\n\n你几乎要以为那只是一场梦。但你的书桌上放着一些不属于你的东西：一块暗影森林的符文石、一枚迦勒底的徽章、塔罗师的愚者牌、一片压干的樱花瓣……\n\n你笑了。\n\n你翻开四级词汇书。那些词你全都认识——不是因为背过，而是因为你经历过。\n\nRitual、Sacrifice、Dread、Blade、Summon、Daemon、Config、Arcana、Celestial、Classmate、Campus、Love、Cell、Nucleus、Gene、Enzyme、Courage、Journey、Light、Home……\n\n每一个词都是一段故事。每一个词都是你走过的路。\n\n你合上书，看向窗外。天空很蓝。\n\n四级不是终点。它是通往更多世界的门票。而你已经准备好了。',
+  outro:null
+};
+
+/* ─── GAME STATE ─── */
+let state = null;
+
+function startGame(){
+  document.getElementById('title').style.display='none';
+  document.getElementById('chapter-select').classList.add('active');
+  renderChapters();
+}
+
+function renderChapters(){
+  const grid = document.getElementById('chapterGrid');
+  const save = loadSave();
+  grid.innerHTML = '';
+  CHAPTERS.forEach((ch,i)=>{
+    const card = document.createElement('div');
+    const unlocked = i === 0 || save.completed.includes(CHAPTERS[i-1].id);
+    const done = save.completed.includes(ch.id) || (ch.id==='end' && save.completed.includes('final'));
+    card.className = `chapter-card${unlocked?'':' locked'}`;
+    card.innerHTML = `
+      <div class="day-tag">DAY ${ch.day}</div>
+      <div class="ch-icon">${unlocked?ch.icon:'🔒'}</div>
+      <h3>${unlocked?ch.title:'???'}</h3>
+      <p>${unlocked?ch.desc:'完成前一章以解锁'}</p>
+      ${done?'<div class="status-badge done">✓ 已完成</div>':!unlocked?'<div class="status-badge lock">🔒 未解锁</div>':''}
+    `;
+    if(unlocked && !done) card.onclick = ()=>playDay(ch.id);
+    grid.appendChild(card);
+  });
+}
+
+function playDay(dayId){
+  state = {dayId,phase:'intro',hp:loadSave().hp,stars:loadSave().stars,challengeIdx:0,bossHp:0,bossMax:0};
+  document.getElementById('chapter-select').classList.remove('active');
+  document.getElementById('game').classList.add('active');
+  renderDay();
+}
+
+function exitGame(){
+  document.getElementById('game').classList.remove('active');
+  document.getElementById('chapter-select').classList.add('active');
+  state = null;
+  renderChapters();
+}
+
+function renderDay(){
+  const story = STORIES[state.dayId];
+  const ch = CHAPTERS.find(c=>c.id===state.dayId);
+  if(!story) return;
+
+  // Update header
+  document.getElementById('dayTitle').innerHTML = `第 ${ch.day} 章 <small>${story.icon} ${ch.title}</small>`;
+  document.getElementById('playerHP').textContent = '❤️ '+state.hp;
+  document.getElementById('dStars').textContent = '⭐ '+state.stars;
+
+  const content = document.getElementById('gameContent');
+
+  // If epilogue (Day 8)
+  if(story.epilogue){
+    content.innerHTML = `
+      <div class="epilogue">
+        <div class="epi-icon">🌅</div>
+        <div class="epi-title">第八章 · 归途</div>
+        <div class="epi-text">${story.text.replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>')}</div>
+      </div>
+      <div class="day-complete">
+        <div class="stats">
+          <span>❤️ ${state.hp} HP</span>
+          <span>⭐ ${state.stars} 星辰</span>
+          <span>📚 8/8 天完成</span>
+        </div>
+        <div style="font-size:2rem;margin-bottom:16px">🎉</div>
+        <p style="color:var(--text2)">你完成了所有八天的冒险！<br>每一个词都是一段旅程。继续前进吧。</p>
+        <button class="next-btn" onclick="exitGame()">✦ 回到时空地图</button>
+      </div>`;
+    updateSave();
+    return;
+  }
+
+  if(state.phase === 'intro'){
+    content.innerHTML = `
+      <div class="story-area">
+        <div class="story-passage">
+          <div class="passage-title">序章 · ${ch.title}</div>
+          <div class="passage-text">${story.intro.text.replace(/\n/g,'<br>')}</div>
+        </div>
+        <div class="choice-box">
+          <div class="q">你如何行动？</div>
+          ${story.intro.choices.map((c,i)=>`<button class="choice-btn" onclick="introChoice(${i})">${c.text}</button>`).join('')}
+        </div>
+      </div>`;
+    return;
+  }
+
+  if(state.phase === 'reading'){
+    const rd = story.reading;
+    if(!rd){startChallenges();return;}
+    // Build passage text with vocab highlights
+    let txt = rd.text;
+    // Replace ${word} with highlighted span
+    const words = story.vocab;
+    words.forEach(w=>{
+      txt = txt.replace('${'+w.w+'}', `<span class="vocab-highlight" data-def="${w.d} (${w.w})">${w.w}</span>`);
+    });
+    content.innerHTML = `
+      <div class="story-area">
+        <div class="story-passage">
+          <div class="passage-title">📖 ${rd.title}</div>
+          <div class="passage-text">${txt.replace(/\n/g,'<br>')}</div>
+        </div>
+        <div class="challenge-box" style="text-align:left">
+          <div style="font-size:.85rem;color:var(--text2);margin-bottom:12px">📚 本章词汇 · 悬停高亮词查看释义</div>
+          ${words.map(w=>`<span style="display:inline-block;background:var(--surface2);border-radius:6px;padding:4px 10px;margin:3px;font-size:.8rem"><strong>${w.w}</strong> <span style="color:var(--text2)">${w.p}</span></span>`).join('')}
+        </div>
+        <button class="choice-btn" onclick="startChallenges()" style="border-color:var(--accent);text-align:center;margin-top:16px">📝 开始词汇挑战 →</button>
+      </div>`;
+    return;
+  }
+
+  if(state.phase === 'challenge'){
+    const chs = story.challenges;
+    if(!chs || state.challengeIdx >= chs.length){startBoss();return;}
+    const c = chs[state.challengeIdx];
+    content.innerHTML = `
+      <div class="story-area">
+        <div class="challenge-box">
+          <div class="challenge-progress">词汇挑战 ${state.challengeIdx+1}/${chs.length}</div>
+          <div class="cw">${c.word}</div>
+          <div class="cp">? · 选择正确释义</div>
+          <div class="ch-desc">${c.q}</div>
+          <div class="challenge-opt" id="chOpts">
+            ${c.answers.map((a,i)=>`<button onclick="answerChallenge(${i})">${a}</button>`).join('')}
+          </div>
+          <div class="challenge-feedback" id="chFeedback"></div>
+          <button class="challenge-next" id="chNext" onclick="nextChallenge()">下一题 →</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  if(state.phase === 'boss'){
+    const b = story.boss;
+    if(!b){finishDay();return;}
+    if(state.bossHp === 0){state.bossHp = b.hp; state.bossMax = b.hp;}
+    if(state.bossHp <= 0){finishDay();return;}
+    const atkIdx = state.bossAtkIdx || 0;
+    const atk = b.attacks[atkIdx];
+    if(!atk){finishDay();return;}
+    const hpPct = Math.round(state.bossHp/state.bossMax*100);
+    const phpPct = Math.max(0,Math.round(state.hp/100*100));
+    content.innerHTML = `
+      <div class="boss-area">
+        <div class="boss-sprite">${b.icon}</div>
+        <div class="boss-name">${b.name}</div>
+        <div class="boss-sub">HP ${state.bossHp}/${state.bossMax}</div>
+        <div class="boss-hp-bar"><div class="fill" style="width:${hpPct}%"></div></div>
+        <div class="player-hp-text">❤️ ${state.hp}</div>
+        <div class="player-hp-bar"><div class="fill" style="width:${phpPct}%"></div></div>
+        <div class="boss-log" id="bossLog">${state.bossLog||'BOSS 发动了攻击！'}</div>
+        <div class="boss-attack">
+          <span class="ba-word">${atk.word}</span>
+          <span class="ba-ctx">"${atk.ctx}"</span>
+        </div>
+        <div class="boss-options" id="bossOpts">
+          ${atk.options.map((o,i)=>`<button onclick="answerBoss(${i})">${o}</button>`).join('')}
+        </div>
+        <div class="player-hp-bar" style="max-width:500px"><div class="fill" style="width:${phpPct}%;height:8px"></div></div>
+      </div>`;
+    return;
+  }
+}
+
+/* ─── GAME LOGIC ─── */
+function introChoice(idx){
+  const story = STORIES[state.dayId];
+  const result = story.intro.choices[idx].result;
+  const content = document.getElementById('gameContent');
+  content.innerHTML = `
+    <div class="story-area">
+      <div class="story-passage">
+        <div class="passage-text">${result.replace(/\n/g,'<br>')}</div>
+      </div>
+      <button class="choice-btn" onclick="startReading()" style="border-color:var(--accent);text-align:center">📖 继续阅读 →</button>
+    </div>`;
+}
+
+function startReading(){
+  state.phase = 'reading';
+  renderDay();
+}
+
+function startChallenges(){
+  const story = STORIES[state.dayId];
+  if(!story.challenges || story.challenges.length===0){
+    if(story.boss) startBoss();
+    else finishDay();
+    return;
+  }
+  state.phase = 'challenge';
+  state.challengeIdx = 0;
+  renderDay();
+}
+
+function answerChallenge(idx){
+  const story = STORIES[state.dayId];
+  const c = story.challenges[state.challengeIdx];
+  const btns = document.querySelectorAll('#chOpts button');
+  btns.forEach(b=>b.onclick=null);
+  if(idx === c.correct){
+    btns[idx].classList.add('correct');
+    state.stars += 2;
+    document.getElementById('chFeedback').innerHTML = `✅ 正确！${c.explain}`;
+    document.getElementById('chFeedback').style.color = '#7affa0';
+  } else {
+    btns[idx].classList.add('wrong');
+    btns[c.correct].classList.add('correct');
+    state.hp = Math.max(1, state.hp - 5);
+    document.getElementById('chFeedback').innerHTML = `❌ 不对哦～正确答案是：${c.answers[c.correct]}`;
+    document.getElementById('chFeedback').style.color = '#ff6666';
+  }
+  document.getElementById('chNext').style.display = 'inline-block';
+  document.getElementById('dStars').textContent = '⭐ '+state.stars;
+  document.getElementById('playerHP').textContent = '❤️ '+state.hp;
+}
+
+function nextChallenge(){
+  const story = STORIES[state.dayId];
+  state.challengeIdx++;
+  if(state.challengeIdx >= story.challenges.length){
+    if(story.boss) startBoss();
+    else finishDay();
+    return;
+  }
+  renderDay();
+}
+
+function startBoss(){
+  state.phase = 'boss';
+  const story = STORIES[state.dayId];
+  if(story.boss){
+    state.bossHp = story.boss.hp;
+    state.bossMax = story.boss.hp;
+    state.bossAtkIdx = 0;
+    state.bossLog = '';
+  }
+  renderDay();
+}
+
+function answerBoss(idx){
+  const story = STORIES[state.dayId];
+  const b = story.boss;
+  const atk = b.attacks[state.bossAtkIdx];
+  const btns = document.querySelectorAll('#bossOpts button');
+  btns.forEach(bn=>bn.onclick=null);
+  
+  const log = document.getElementById('bossLog');
+  
+  if(idx === atk.answer){
+    btns[idx].classList.add('correct');
+    state.bossHp -= 15;
+    if(state.bossHp < 0) state.bossHp = 0;
+    state.stars += 3;
+    log.innerHTML = `⚔️ 你的攻击命中！BOSS 受到 15 点伤害！`;
+    document.getElementById('dStars').textContent = '⭐ '+state.stars;
+  } else {
+    btns[idx].classList.add('wrong');
+    btns[atk.answer].classList.add('correct');
+    const dmg = 10 + Math.floor(Math.random()*10);
+    state.hp -= dmg;
+    if(state.hp < 1) state.hp = 1;
+    log.innerHTML = `💥 BOSS 反击！你受到 ${dmg} 点伤害！`;
+    document.getElementById('playerHP').textContent = '❤️ '+state.hp;
+  }
+  
+  state.bossAtkIdx = (state.bossAtkIdx + 1) % b.attacks.length;
+  
+  // Check boss death
+  if(state.bossHp <= 0){
+    setTimeout(()=>{
+      const content = document.getElementById('gameContent');
+      content.innerHTML = `
+        <div class="boss-area">
+          <div class="boss-victory">
+            <span class="big">🎉</span>
+            <strong>${b.name} 被击败了！</strong>
+            <p style="font-size:.9rem;color:var(--text2);margin-top:12px">你获得了 ${state.stars} 星辰之力</p>
+          </div>
+          <div class="story-area">
+            <div class="story-passage">
+              <div class="passage-text">${story.outro.replace(/\n/g,'<br>')}</div>
+            </div>
+            <button class="choice-btn" onclick="finishDay()" style="border-color:var(--accent);text-align:center">🌟 完成章节 →</button>
+          </div>
+        </div>`;
+    },800);
+    return;
+  }
+  
+  // Continue boss fight
+  setTimeout(()=>renderDay(), 1200);
+}
+
+function finishDay(){
+  const story = STORIES[state.dayId];
+  const ch = CHAPTERS.find(c=>c.id===state.dayId);
+  
+  // Check if it's epilogue
+  if(ch.day === 8){
+    document.getElementById('gameContent').innerHTML = `
+      <div class="day-complete">
+        <div class="big-icon">🌅</div>
+        <h2>旅程的终点</h2>
+        <p>你完成了所有八天的时空冒险。</p>
+        <div class="stats">
+          <span>❤️ ${state.hp}</span>
+          <span>⭐ ${state.stars}</span>
+          <span>📚 8/8</span>
+        </div>
+        <button class="next-btn" onclick="exitGame()">✦ 回到时空地图</button>
+      </div>`;
+    updateSave();
+    return;
+  }
+  
+  const nextCh = CHAPTERS.find(c=>c.day===ch.day+1);
+  document.getElementById('gameContent').innerHTML = `
+    <div class="day-complete">
+      <div class="big-icon">${story.icon}</div>
+      <h2>✦ ${ch.title} · 完成 ✦</h2>
+      <div class="stats">
+        <span>❤️ ${state.hp}</span>
+        <span>⭐ ${state.stars}</span>
+        <span>📚 第 ${ch.day} 天 ✓</span>
+      </div>
+      <div class="story-area">
+        <div class="story-passage">
+          <div class="passage-text">${story.outro.replace(/\n/g,'<br>')}</div>
+        </div>
+      </div>
+      <button class="next-btn" onclick="goToNext()">✦ 进入第 ${ch.day+1} 天 →</button>
+    </div>`;
+  
+  updateSave();
+}
+
+function goToNext(){
+  const ch = CHAPTERS.find(c=>c.id===state.dayId);
+  const nextCh = CHAPTERS.find(c=>c.day===ch.day+1);
+  if(nextCh) playDay(nextCh.id);
+}
+
+function updateSave(){
+  const save = loadSave();
+  save.hp = state.hp;
+  save.stars = state.stars;
+  const ch = CHAPTERS.find(c=>c.id===state.dayId);
+  if(!save.completed.includes(state.dayId)) save.completed.push(state.dayId);
+  save.day = Math.max(save.day, ch?ch.day+1:save.day);
+  saveSave(save);
+}
+
+/* ─── BOOT ─── */
+setTimeout(()=>document.getElementById('load').classList.add('hide'), 800);
+</script>
+</body>
+</html>
