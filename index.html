@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>地月 · 四级时空冒险</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Fira+Code:wght@400;700&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
-<script src="data.js"></script>
+
+
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{min-height:100vh;background:#0a0a0f;font-family:'Noto Serif SC',serif;color:#e0dcd0;overflow-x:hidden}
+body{min-height:100vh;background:#0a0a0f;font-family:serif;color:#e0dcd0;overflow-x:hidden}
 :root{--bg:#0a0a0f;--surface:#14141e;--surface2:#1c1c2a;--text:#e0dcd0;--text2:#908a78;--accent:#bb86fc}
 #load{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:24px;transition:opacity .6s}
 #load.hide{opacity:0;pointer-events:none}
@@ -17,9 +17,9 @@ body{min-height:100vh;background:#0a0a0f;font-family:'Noto Serif SC',serif;color
 
 /* Title screen */
 #title{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center;position:relative}
-#title h1{font-size:clamp(2rem,6vw,4rem);font-family:'Cinzel',serif;margin-bottom:16px;letter-spacing:4px}
+#title h1{font-size:clamp(2rem,6vw,4rem);font-family:serif;margin-bottom:16px;letter-spacing:4px}
 #title .sub{font-size:clamp(.9rem,2vw,1.1rem);color:var(--text2);margin-bottom:40px;line-height:1.6}
-#title .start-btn{background:var(--surface2);border:2px solid var(--accent);border-radius:16px;padding:16px 48px;font-size:1.2rem;color:var(--text);cursor:pointer;font-family:'Cinzel',serif;transition:all .4s;letter-spacing:3px}
+#title .start-btn{background:var(--surface2);border:2px solid var(--accent);border-radius:16px;padding:16px 48px;font-size:1.2rem;color:var(--text);cursor:pointer;font-family:serif;transition:all .4s;letter-spacing:3px}
 #title .start-btn:hover{background:rgba(187,134,252,.15);box-shadow:0 0 30px rgba(187,134,252,.2);transform:translateY(-3px)}
 #title .version{position:absolute;bottom:24px;font-size:.7rem;color:var(--text2);opacity:.3}
 
@@ -31,7 +31,7 @@ body{min-height:100vh;background:#0a0a0f;font-family:'Noto Serif SC',serif;color
 .chapter-card:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.15)}
 .chapter-card.locked{opacity:.35;cursor:not-allowed;filter:grayscale(.6)}
 .chapter-card.locked:hover{transform:none}
-.chapter-card .day-tag{font-size:.7rem;font-family:'Fira Code',monospace;color:var(--text2);margin-bottom:6px}
+.chapter-card .day-tag{font-size:.7rem;font-family:monospace;color:var(--text2);margin-bottom:6px}
 .chapter-card .ch-icon{font-size:1.8rem;margin-bottom:8px}
 .chapter-card h3{font-size:1rem;margin-bottom:4px}
 .chapter-card p{font-size:.8rem;color:var(--text2);line-height:1.4}
@@ -51,9 +51,9 @@ body{min-height:100vh;background:#0a0a0f;font-family:'Noto Serif SC',serif;color
 .day-header .back:hover{color:var(--text)}
 .day-header .d-title{flex:1;font-size:.95rem}
 .day-header .d-title small{display:block;font-size:.7rem;color:var(--text2);font-weight:400}
-.day-header .d-hp{font-size:.8rem;font-family:'Fira Code',monospace;color:#7affa0;display:flex;align-items:center;gap:6px}
+.day-header .d-hp{font-size:.8rem;font-family:monospace;color:#7affa0;display:flex;align-items:center;gap:6px}
 .day-header .d-hp.danger{color:#ff6666}
-.day-header .d-stars{color:var(--accent);font-size:.85rem;font-family:'Fira Code',monospace}
+.day-header .d-stars{color:var(--accent);font-size:.85rem;font-family:monospace}
 
 /* Story area */
 .story-area{max-width:720px;margin:0 auto;padding:32px 20px 100px}
@@ -77,7 +77,7 @@ body{min-height:100vh;background:#0a0a0f;font-family:'Noto Serif SC',serif;color
 /* Vocab challenge */
 .challenge-box{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:32px;margin-bottom:24px;text-align:center}
 .challenge-box .cw{font-size:2rem;font-weight:700;margin-bottom:4px;letter-spacing:2px}
-.challenge-box .cp{font-size:.75rem;color:var(--text2);margin-bottom:20px;font-family:'Fira Code',monospace}
+.challenge-box .cp{font-size:.75rem;color:var(--text2);margin-bottom:20px;font-family:monospace}
 .challenge-box .ch-desc{font-size:.85rem;color:var(--text2);margin-bottom:20px;line-height:1.5}
 .challenge-opt{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:500px;margin:0 auto}
 .challenge-opt button{background:var(--surface2);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 12px;color:var(--text);cursor:pointer;font-family:inherit;font-size:.82rem;transition:all .3s;text-align:center;line-height:1.4;min-height:60px}
@@ -87,7 +87,7 @@ body{min-height:100vh;background:#0a0a0f;font-family:'Noto Serif SC',serif;color
 .challenge-feedback{margin-top:16px;font-size:.9rem;min-height:2em}
 .challenge-next{margin-top:16px;display:none;background:var(--surface2);border:1px solid var(--accent);border-radius:10px;padding:10px 28px;color:var(--text);cursor:pointer;font-family:inherit;font-size:.85rem;transition:all .3s}
 .challenge-next:hover{background:rgba(187,134,252,.12)}
-.challenge-progress{font-size:.7rem;color:var(--text2);margin-bottom:12px;font-family:'Fira Code',monospace}
+.challenge-progress{font-size:.7rem;color:var(--text2);margin-bottom:12px;font-family:monospace}
 
 /* Boss battle */
 .boss-area{max-width:720px;margin:0 auto;padding:32px 20px 100px;text-align:center}
@@ -97,10 +97,10 @@ body{min-height:100vh;background:#0a0a0f;font-family:'Noto Serif SC',serif;color
 .boss-sub{font-size:.8rem;color:var(--text2);margin-bottom:16px}
 .boss-hp-bar{max-width:400px;margin:0 auto 8px;height:8px;background:rgba(255,0,0,.15);border-radius:4px;overflow:hidden}
 .boss-hp-bar .fill{height:100%;background:linear-gradient(90deg,#c62828,#ff4444);border-radius:4px;transition:width .5s}
-.boss-hp-text{font-size:.75rem;color:var(--text2);font-family:'Fira Code',monospace;margin-bottom:24px}
+.boss-hp-text{font-size:.75rem;color:var(--text2);font-family:monospace;margin-bottom:24px}
 .player-hp-bar{max-width:400px;margin:16px auto 8px;height:6px;background:rgba(0,255,65,.1);border-radius:3px;overflow:hidden}
 .player-hp-bar .fill{height:100%;background:linear-gradient(90deg,#4caf50,#7affa0);border-radius:3px;transition:width .4s}
-.player-hp-text{font-size:.7rem;color:var(--text2);font-family:'Fira Code',monospace;margin-bottom:20px}
+.player-hp-text{font-size:.7rem;color:var(--text2);font-family:monospace;margin-bottom:20px}
 .boss-log{font-size:.85rem;color:var(--text2);margin-bottom:20px;min-height:2em;line-height:1.6}
 .boss-attack{font-size:1.1rem;margin-bottom:16px;min-height:1.5em}
 .boss-attack .ba-word{font-size:1.6rem;font-weight:700;display:block;margin-bottom:4px}
